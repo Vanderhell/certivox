@@ -56,13 +56,15 @@ ctest --test-dir build-gcc --output-on-failure
 |---|---|
 | Windows host, MSVC 19.42.34444, Visual Studio 17 2022, Release | 15/15 PASS |
 | Windows host, GCC 16.1.0, Ninja, default release flags | 15/15 PASS |
-| Windows host, Clang 22.1.8 | NOT TESTED: linker could not find `oldnames.lib` and `msvcrtd.lib` |
+| Windows host, ClangCL 19.1.5 with Visual Studio 17 2022, Release | 15/15 PASS |
 | Windows host, GCC sanitizer build | NOT TESTED: MinGW linker could not find `libasan` and `libubsan` |
 | ESP32-S3 source records | PASS evidence copied; fresh extraction run pending |
 
 ## Known gaps
 
-- Sanitizer and Clang runs are not yet recorded in this reference extraction.
+- Sanitizer runs are not yet recorded in this reference extraction.
+- GNU-mode `clang.exe` is not the supported Windows configuration; use the
+  Visual Studio `ClangCL` toolset so the MSVC runtime libraries are available.
 - The copied ESP32-S3 records include test harness/runtime footprint and must
   not be treated as isolated library footprint.
 - No new ESP32-S3 firmware was flashed after extraction in this step; hardware
