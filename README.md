@@ -112,7 +112,7 @@ version after release. Certivox is licensed under the Apache License, Version
 
 ## Origin
 
-Certivox is extracted from PrimitiveCore's `encoding/wire_and_binary` family,
-which preserves validated implementations originating in the RoundMath source
+Certivox provides the `encoding/wire_and_binary` functionality as a self-contained library,
+which preserves validated implementations originating in the the source project source
 repository. The standalone `cv_` prefix is a product-level API adaptation;
 the algorithms and numeric contracts were not intentionally changed.
