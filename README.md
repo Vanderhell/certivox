@@ -36,8 +36,9 @@ See [the architecture document](docs/ARCHITECTURE.md).
 ## Supported platforms
 
 The code uses standard C99 integer and size types and is intended for bare
-metal and hosted C environments. The source validation records cover ESP32-S3
-at 240 MHz. A post-extraction ESP32-S3 run is pending.
+metal and hosted C environments. The extracted product was tested on an
+ESP32-S3 at 240 MHz using the USB-Serial/JTAG connection. Other targets remain
+portable-by-inspection rather than hardware-verified.
 
 ## Installation
 
@@ -80,18 +81,20 @@ sources directly.
 
 ## Memory footprint and performance
 
-No isolated flash, RAM or stack measurement is claimed yet. The inherited
-ESP32-S3 records contain harness-inclusive measurements and are summarized in
-[PERFORMANCE.md](docs/PERFORMANCE.md). The host benchmark is not an MCU
-measurement.
+The ESP32-S3 test firmware occupies 311,592 bytes of program storage and uses
+22,248 bytes of global RAM, including Arduino and the complete test harness.
+An A/B minimal-firmware comparison attributes 104 bytes of program storage and
+no additional global RAM to the linked CRC32 primitive. Stack and heap usage
+for the product alone were not separately measured. Details are in
+[PERFORMANCE.md](docs/PERFORMANCE.md); host timings are not MCU measurements.
 
 ## Testing and hardware validation
 
 Fourteen source test programs plus one new integration test are provided. Run
 them with CTest; details and known gaps are in [TESTING.md](docs/TESTING.md).
-The source records report PASS on ESP32-S3, but this extracted product is
-classified `EXPERIMENTAL` until it has a fresh hardware run, isolated footprint
-measurements and license clearance.
+The extracted ESP32-S3 firmware passed its known-vector, exhaustive error,
+and 10,000-case randomized checks. The product remains `EXPERIMENTAL` because
+sanitizer and per-function stack measurements are still pending.
 
 ## Limitations and security
 
@@ -104,8 +107,8 @@ key management or tamper resistance.
 
 Version `0.1.0` is an extraction baseline. Numerical behavior follows the
 source implementations; API compatibility will be maintained within a major
-version after release. No source license file was available, so this staging
-repository is not cleared for redistribution; see `LICENSE`.
+version after release. Certivox is licensed under the Apache License, Version
+2.0, with copyright attribution to Vanderhell; see `LICENSE` and `NOTICE`.
 
 ## Origin
 

@@ -9,7 +9,7 @@
 | Host test executables | 15 |
 | Host result | PASS (reference build, see release record) |
 | Hardware evidence packages | 14 |
-| Hardware result in source evidence | PASS for each recorded package |
+| Extracted hardware run | PASS, 10,000 randomized CRC32 cases plus exhaustive error cases |
 | Newly added tests | 1 |
 
 ## Test category table
@@ -22,6 +22,7 @@
 | SECDED exhaustive/error patterns | 2 | Host C99 | PASS | `tests/test_secded*.c` |
 | Cross-module integration | 1 | Host C99 | PASS | `tests/test_integration.c` |
 | ESP32-S3 source evidence | 14 | ESP32-S3, 240 MHz | PASS in source records | `docs/hardware/*.md` |
+| Extracted ESP32-S3 integration run | 1 run, 10,000 randomized CRC32 cases plus exhaustive Hamming/SECDED cases | ESP32-S3 QFN56 rev0.2, 240 MHz | PASS | `hardware/esp32s3/certivox_hw/certivox_hw.ino` |
 
 ## Tested functions
 
@@ -58,16 +59,15 @@ ctest --test-dir build-gcc --output-on-failure
 | Windows host, GCC 16.1.0, Ninja, default release flags | 15/15 PASS |
 | Windows host, ClangCL 19.1.5 with Visual Studio 17 2022, Release | 15/15 PASS |
 | Windows host, GCC sanitizer build | NOT TESTED: MinGW linker could not find `libasan` and `libubsan` |
-| ESP32-S3 source records | PASS evidence copied; fresh extraction run pending |
+| ESP32-S3 extracted firmware | PASS; COM37, 240 MHz, ESP32 core 3.3.10, 10,000 randomized CRC32 cases plus exhaustive Hamming/SECDED cases |
 
 ## Known gaps
 
 - Sanitizer runs are not yet recorded in this reference extraction.
 - GNU-mode `clang.exe` is not the supported Windows configuration; use the
   Visual Studio `ClangCL` toolset so the MSVC runtime libraries are available.
-- The copied ESP32-S3 records include test harness/runtime footprint and must
-  not be treated as isolated library footprint.
-- No new ESP32-S3 firmware was flashed after extraction in this step; hardware
-  status is inherited evidence, not a post-extraction release gate.
-- License clearance is unresolved because the source repositories did not
-  contain a license file.
+- The extracted ESP32-S3 result is a real firmware run on COM37. Its reported
+  footprint includes Arduino/runtime and the test harness; the A/B isolated
+  delta is documented separately in `PERFORMANCE.md`.
+- Stack usage and sanitizer results remain unverified.
+- The product license is Apache-2.0 with copyright attribution to Vanderhell.
