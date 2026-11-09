@@ -50,6 +50,16 @@ cmake --build build-gcc
 ctest --test-dir build-gcc --output-on-failure
 ```
 
+## Test environment
+
+| Environment | Result |
+|---|---|
+| Windows host, MSVC 19.42.34444, Visual Studio 17 2022, Release | 15/15 PASS |
+| Windows host, GCC 16.1.0, Ninja, default release flags | 15/15 PASS |
+| Windows host, Clang 22.1.8 | NOT TESTED: linker could not find `oldnames.lib` and `msvcrtd.lib` |
+| Windows host, GCC sanitizer build | NOT TESTED: MinGW linker could not find `libasan` and `libubsan` |
+| ESP32-S3 source records | PASS evidence copied; fresh extraction run pending |
+
 ## Known gaps
 
 - Sanitizer and Clang runs are not yet recorded in this reference extraction.
