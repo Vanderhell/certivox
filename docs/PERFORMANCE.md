@@ -23,6 +23,25 @@ Newly measured on the user-authorized ESP32-S3 at COM37 (ESP32-S3 rev. 0.2, 240 
 
 The benchmark dispatches through volatile function pointers and folds every result into a volatile sink to prevent elimination. These are current board observations under this harness and build, not universal timing guarantees. ESP-IDF boot/runtime and the test harness are not included in the isolated library size below.
 
+The linker map attributes 1,548 bytes of linked library code to its 14 API translation units in this all-APIs-referenced image:
+
+| API translation unit | Linked flash bytes | Static RAM bytes |
+|---|---:|---:|
+| `cv_crc8_compute.c` | 78 | 0 |
+| `cv_crc16_compute.c` | 88 | 0 |
+| `cv_crc24_compute.c` | 90 | 0 |
+| `cv_crc32_compute.c` | 72 | 0 |
+| `cv_crc64_compute.c` | 106 | 0 |
+| `cv_crc_update_byte_u32.c` | 33 | 0 |
+| `cv_crc_combine_u32.c` | 232 | 0 |
+| `cv_crc_reflect_poly_u32.c` | 84 | 0 |
+| `cv_hamming74_encode.c` | 106 | 0 |
+| `cv_hamming74_decode.c` | 183 | 0 |
+| `cv_hamming84_encode.c` | 61 | 0 |
+| `cv_hamming84_decode.c` | 180 | 0 |
+| `cv_secded_parity_u32.c` | 85 | 0 |
+| `cv_secded_check_u32.c` | 150 | 0 |
+
 ## Historical ESP32-S3 evidence
 
 The results below are retained from existing device reports dated 2026-11-09; they are not newly executed measurements. Individual module reports identify ESP32-S3 at 240 MHz on COM36 with Arduino-ESP32 3.3.10 / Xtensa GCC 14.2.0. The extracted all-in-one sketch report identifies COM37. Each timing is a reported mean and min/max range on its documented representative input, not a current verification claim.
@@ -52,9 +71,9 @@ The old all-in-one Arduino test firmware measured 311,592 bytes program storage 
 
 | Current-audit metric | Result |
 |---|---|
-| Isolated complete-library linked flash contribution (`libcertivox.a`, all 14 APIs referenced) | 1,548 bytes (`.flash.text`) |
-| Isolated library static RAM contribution | 0 bytes in linked `.dram0.data` / `.dram0.bss` |
+| Isolated complete-library linked flash contribution (`libcertivox.a`, all 14 APIs referenced) | 1,548 bytes (`.flash.text`, per-file map sum) |
+| Isolated library static RAM contribution | 0 bytes in linked `.dram0.data` / `.dram0.bss` across all API translation units |
 | Whole validation app binary | 194,320 bytes (includes ESP-IDF runtime and validation harness; not library size) |
 | Main-task stack watermark | 1,652 bytes observed use from a 3,584-byte task stack; 1,932 bytes minimum free, word size 1 byte |
 
-Footprint values are ESP-IDF 5.5.1 linker map/component accounting for this configuration. Per-API isolated flash values were not measured. The stack watermark is a single observed high-water mark for this test run, not a maximum stack bound. Historical Arduino measurements above remain historical and separate.
+Footprint values are ESP-IDF 5.5.1 linker map/component accounting for this configuration; individual translation-unit values depend on this link configuration. The stack watermark is a single observed high-water mark for this test run, not a maximum stack bound. Historical Arduino measurements above remain historical and separate.
