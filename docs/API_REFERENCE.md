@@ -67,3 +67,5 @@ The parity API maps 32 data bits into positions 1..38, stores six positional par
 | `cv_secded_parity_u32` / `cv_secded_check_u32` | `tests/test_secded_parity_u32.c` / `tests/test_secded_check_u32.c` |
 
 `tests/test_audit_differential.c` independently exercises all 14 APIs. Checks use explicit `CHECK` logic, not `assert()`, so they remain active with `NDEBUG`. Matrix results and limits are in `docs/TESTING.md`.
+
+All 14 APIs were also called by the current ESP32-S3 validation firmware, which printed `CERTIVOX_ALL14_PASS`. This is representative hardware validation, not exhaustive enumeration of every possible input; hardware configuration and measurements are documented in `docs/PERFORMANCE.md`.

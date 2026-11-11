@@ -35,7 +35,7 @@ The MinGW sanitizer attempts failed during compiler link checks because the runt
 
 ## Remote GitHub Actions
 
-Workflow [43015999514](https://github.com/Vanderhell/certivox/actions/runs/43015999514) on commit `f758fded8e2db92df42deeda88a72bdfcd5be496` completed **8/8 PASS**: GCC Debug/Release, Clang Debug/Release, MSVC Debug/Release, GCC ASan and GCC UBSan. This run includes the new differential suite and supplies sanitizer evidence unavailable from the local MinGW installation.
+Workflow [43016178113](https://github.com/Vanderhell/certivox/actions/runs/43016178113) on commit `48d7eeef414b7869358ffcf889949cd1e206106f` completed **8/8 PASS**: GCC Debug/Release, Clang Debug/Release, MSVC Debug/Release, GCC ASan and GCC UBSan. This run includes the differential suite and supplies sanitizer evidence unavailable from the local MinGW installation.
 
 ## Reproduce
 
@@ -57,9 +57,13 @@ ctest --test-dir build -C Release --output-on-failure
 
 ## ESP32-S3 status
 
-**HW NOT VERIFIED for this audit.** The read-only Windows port inventory found Espressif USB serial devices at COM36, COM19 and COM37. COM37 is reserved; COM19 and COM36 may contain another project's firmware/data. Ports were enumerated by USB descriptor only; none were opened, reset, flashed or otherwise modified. No available board was authorized for Certivox, so no new hardware PASS or current performance claim is made.
+**Current hardware result: PASS, 14/14 APIs** on the user-authorized ESP32-S3 at COM37 (USB Serial/JTAG; MAC `3c:0f:02:d9:77:30`; ESP32-S3 revision 0.2). Validation firmware was built with ESP-IDF 5.5.1 and all 14 public APIs were called and checked against known answers, independent positional/parity references, and exhaustive Hamming/SECDED bit-error patterns for representative data. Serial output: `CERTIVOX_ALL14_PASS|passed=14/14|first_failed_api=0`.
 
-Existing records under `docs/hardware/` and the extracted sketch run are historical evidence. The individual source records identify COM36 and report per-API tests; the old extracted integration run is recorded as COM37, 240 MHz, with 10,000 seeded CRC32 cases plus exhaustive Hamming/SECDED cases. Neither is a newly executed run or current-device verification. Hardware source copies under `hardware/esp32s3/certivox_hw/impl/` currently match their corresponding `src/*.c` files byte-for-byte, but that source match does not make the old firmware run current.
+Only app0 (`0x10000..0x3FFFF`) was written. No bootloader, partition table, OTA metadata, NVS, app1, SPIFFS or coredump areas were written. Per the user's instruction, no backup was made; the prior app0 contents were overwritten and were not restored. COM19 and COM36 were not used. This is an explicit test deployment rather than a nondestructive inspection.
+
+The first firmware run failed the API 13 check because the temporary, independent SECDED parity oracle initialized overall parity from the data word and then counted each set data bit again. The oracle was corrected and the rebuilt firmware then passed all 14 checks. This was a test-harness defect; no production source was changed.
+
+Earlier records under `docs/hardware/` and the extracted sketch run remain historical evidence and are not used as this run's result. The current firmware compiled the production `src/*.c` files directly as C99. Host and hardware checks are independent evidence; hardware vectors are targeted and do not exhaust 32-bit data domains.
 
 ## Known limits
 
@@ -67,4 +71,5 @@ Existing records under `docs/hardware/` and the extracted sketch run are histori
 - The maximum CRC-combine suffix length has an independent fixed reference vector; no 4 GiB payload was materialized.
 - Ordinary Hamming(7,4) can miscorrect multi-bit errors. Extended Hamming and SECDED guarantees cover only one- and two-bit error patterns respectively.
 - CRC and ECC here are not cryptographic authentication or tamper protection.
-- Current hardware cycles, per-module flash/RAM and stack use are not measured.
+- The hardware run uses representative vectors; it does not exhaust every CRC input or the complete SECDED data domain.
+- Hardware performance and footprint measurement method and limitations are recorded in `docs/PERFORMANCE.md`.

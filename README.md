@@ -44,9 +44,9 @@ The CMake test option is CERTIVOX_BUILD_TESTS. The library has no mandatory thir
 
 ## Validation status
 
-All 14 public APIs have direct enabled tests. The audit differential suite adds 100,000 deterministic reference comparisons per applicable CRC operation and 100,000 full-width SECDED inputs. GCC, ClangCL and MSVC Debug/Release results, sanitizer status, historical hardware evidence and current hardware authorization limits are recorded in [docs/TESTING.md](docs/TESTING.md).
+All 14 public APIs have direct enabled tests. The audit differential suite adds 100,000 deterministic reference comparisons per applicable CRC operation and 100,000 full-width SECDED inputs. GCC, ClangCL and MSVC Debug/Release results and sanitizer status are recorded in [docs/TESTING.md](docs/TESTING.md).
 
-Current ESP32-S3 status for this audit: **HW NOT VERIFIED**. Historical ESP32-S3 reports are explicitly separated from current-source host results in [docs/PERFORMANCE.md](docs/PERFORMANCE.md). No CRC or ECC operation is a substitute for authenticated integrity protection.
+The current ESP32-S3 validation on the user-authorized COM37 board passed all 14 API checks. Compiler settings, measured cycles, library-only footprint, and the stack watermark's limits are recorded in [docs/PERFORMANCE.md](docs/PERFORMANCE.md). No CRC or ECC operation is a substitute for authenticated integrity protection.
 
 Detailed overflow, rounding, invalid-input, memory-ownership and state rules are defined by the public headers and API reference. Do not infer them from the product name alone.
 
