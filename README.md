@@ -3,7 +3,7 @@
 
 ![Certivox banner](docs/banner.svg)
 
-CRC profiles, streaming CRC helpers, Hamming codes and SECDED error detection.
+CRC profiles, streaming CRC helpers, Hamming codes and SECDED error correction/detection. CRCs and ECC do not provide cryptographic authentication or tamper protection.
 
 ## Why it exists
 
@@ -44,8 +44,9 @@ The CMake test option is CERTIVOX_BUILD_TESTS. The library has no mandatory thir
 
 ## Validation status
 
-15/15 host tests passed; ESP32-S3 validation is recorded in docs/TESTING.md.
-See docs/TESTING.md for reproducible commands, coverage boundaries and hardware status.
+All 14 public APIs have direct enabled tests. The audit differential suite adds 100,000 deterministic reference comparisons per applicable CRC operation and 100,000 full-width SECDED inputs. GCC, ClangCL and MSVC Debug/Release results, sanitizer status, historical hardware evidence and current hardware authorization limits are recorded in [docs/TESTING.md](docs/TESTING.md).
+
+Current ESP32-S3 status for this audit: **HW NOT VERIFIED**. Historical ESP32-S3 reports are explicitly separated from current-source host results in [docs/PERFORMANCE.md](docs/PERFORMANCE.md). No CRC or ECC operation is a substitute for authenticated integrity protection.
 
 Detailed overflow, rounding, invalid-input, memory-ownership and state rules are defined by the public headers and API reference. Do not infer them from the product name alone.
 

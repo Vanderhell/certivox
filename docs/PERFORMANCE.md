@@ -1,55 +1,41 @@
-# Performance
+# Performance and memory
 
-## Extracted ESP32-S3 validation
+## Current audit status
 
-The following result was measured on 2026-11-09 using an ESP32-S3 QFN56
-revision 0.2 board at 240 MHz, USB-Serial/JTAG on COM37, Arduino ESP32 core
-3.3.10, and the `esp32:esp32:esp32s3:CDCOnBoot=cdc,UploadSpeed=921600`
-configuration. The firmware ran 10,000 seeded randomized CRC32 comparisons,
-exhaustive Hamming(7,4) single-bit cases, Hamming(8,4) correction/rejection
-cases, SECDED clean-state checks, and CRC known vectors.
+**HW NOT VERIFIED.** COM37 is reserved, and COM19/COM36 may hold firmware and data belonging to other projects. They were enumerated read-only and not opened or modified. No current hardware cycle, isolated footprint or stack measurement was performed for this audit.
 
-| Measurement | Result | Scope |
-|---|---:|---|
-| Hardware test result | PASS | Complete extracted test sketch |
-| CRC32 cycles for 32-byte input, minimum | 1,765 | 10 batches of 10,000 calls |
-| CRC32 cycles for 32-byte input, maximum | 1,765 | 10 batches of 10,000 calls |
-| Test firmware program storage | 311,592 bytes | Arduino/runtime + complete harness |
-| Test firmware global RAM | 22,248 bytes | Arduino/runtime + complete harness |
+## Historical ESP32-S3 evidence
 
-## Isolated product delta
+The results below are retained from existing device reports dated 2026-11-09; they are not newly executed measurements. Individual module reports identify ESP32-S3 at 240 MHz on COM36 with Arduino-ESP32 3.3.10 / Xtensa GCC 14.2.0. The extracted all-in-one sketch report identifies COM37. Each timing is a reported mean and min/max range on its documented representative input, not a current verification claim.
 
-An A/B build used the same Arduino configuration, serial output and loop
-structure. The baseline contained no Certivox code; the minimal build linked
-only `cv_crc32_compute`. This is a link-time delta, not a whole-firmware
-estimate for all fourteen public functions.
+| API | Historical timing at 240 MHz |
+|---|---:|
+| `cv_crc8_compute`, 32 bytes | mean 2,549.01 cycles/call; range 2,548.99â€“2,549.10 |
+| `cv_crc16_compute`, 32 bytes | mean 2,004.43; range 2,004.34â€“2,004.50 |
+| `cv_crc24_compute`, 32 bytes | mean 2,455.59; range 2,455.56â€“2,455.67 |
+| `cv_crc32_compute`, 32 bytes | mean 1,748.34; range 1,748.25â€“1,748.40 |
+| `cv_crc64_compute`, 32 bytes | mean 2,587.19; range 2,587.10â€“2,587.24 |
+| `cv_crc_update_byte_u32`, one byte | mean 73.34; range 73.34â€“73.44 |
+| `cv_crc_combine_u32`, suffix 32,768â€“32,867 bytes | mean 209,726.50; range 209,720.04â€“209,736.88 |
+| `cv_crc_reflect_poly_u32`, width 1 / 32 | mean 58.29 / 306.56 |
+| `cv_hamming74_encode` | mean 64.32; range 64.31â€“64.33 |
+| `cv_hamming74_decode` | mean 79.90; range 79.89â€“79.90 |
+| `cv_hamming84_encode` | mean 129.64; range 129.64â€“129.65 |
+| `cv_hamming84_decode` | mean 121.15; range 121.14â€“121.15 |
+| `cv_secded_parity_u32` | mean 370.77; range 370.76â€“370.78 |
+| `cv_secded_check_u32` | mean 2,926.48; range 2,926.47â€“2,926.50 |
 
-| Build | Program storage | Global RAM |
-|---|---:|---:|
-| Baseline without Certivox | 309,364 bytes | 22,184 bytes |
-| Minimal build with CRC32 | 309,468 bytes | 22,184 bytes |
-| Measured delta | 104 bytes | 0 bytes |
+These reported timings use the historical harness and may include harness characteristics; consult each `docs/hardware/*.md` record for its exact batch method and test inputs. They are not a best/median/worst profile for the current audit.
 
-Stack, heap and per-function deltas were not measured.
+## Memory records
 
-## Inherited source records
+The old all-in-one Arduino test firmware measured 311,592 bytes program storage and 22,248 bytes global RAM, including Arduino/runtime and harness. These totals are **not** Certivox library size. A historical A/B link-size comparison for a minimal build containing only `cv_crc32_compute` reported a 104-byte flash delta and 0-byte global-RAM delta. This is not an all-module footprint measurement.
 
-The source ESP32-S3 records report 240 MHz measurements for the original
-implementations. They are retained for traceability only. Reported firmware
-sizes include Arduino/runtime, harness, test buffers and oracle data; they are
-not Certivox-only `.text`, `.rodata`, `.data` or `.bss` measurements.
+| Current-audit metric | Result |
+|---|---|
+| Per-API isolated flash contribution | NOT MEASURED |
+| Complete-library isolated flash contribution | NOT MEASURED |
+| Per-module/static RAM contribution | NOT MEASURED |
+| Stack use | NOT MEASURED |
 
-| Group | Hardware status | Measurement status |
-|---|---|---|
-| CRC profiles and helpers | ESP32-S3 PASS in source records | Retained for provenance; harness-inclusive |
-| Hamming(7,4)/(8,4) | ESP32-S3 PASS in source records | Retained for provenance; harness-inclusive |
-| SECDED(39,32) | ESP32-S3 PASS in source records | Retained for provenance; harness-inclusive |
-
-## Host benchmark
-
-`bench/host_benchmark.c` is a smoke benchmark only. Host clock ticks are not
-MCU cycle measurements and must not be compared with the ESP32-S3 records.
-
-The host benchmark is not an MCU cycle measurement. The isolated delta above
-must not be generalized to the complete product without another per-module
-link-time measurement.
+No current stack bounds or maximum stack claim is available. Host `bench/host_benchmark.c` is a smoke benchmark and does not produce MCU cycle counts.

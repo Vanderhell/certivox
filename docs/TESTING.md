@@ -1,73 +1,66 @@
-# Testing
+# Testing and validation
 
-## Test summary
+## API inventory and coverage
 
-| Measure | Result |
-|---|---:|
-| Original source test programs migrated | 14 |
-| New integration tests | 1 |
-| Host test executables | 15 |
-| Host result | PASS (reference build, see release record) |
-| Hardware evidence packages | 14 |
-| Extracted hardware run | PASS, 10,000 randomized CRC32 cases plus exhaustive error cases |
-| Newly added tests | 1 |
+The 14 public declarations under `include/certivox/` each have a direct enabled test. `tests/test_audit_differential.c` independently checks all 14 APIs; the existing per-API programs remain enabled. All test checks use explicit `CHECK` logic and run in Debug and Release (`NDEBUG` does not disable them).
 
-## Test category table
-
-| Category | Count | Platform | Result | Evidence |
-|---|---:|---|---|---|
-| CRC known vectors and invalid pointers | 5 | Host C99 | PASS | `tests/test_*crc*_compute.c` |
-| CRC streaming/combine/reflection | 3 | Host C99 | PASS | `tests/test_crc_update_byte_u32.c`, `test_crc_combine_u32.c`, `test_crc_reflect_poly_u32.c` |
-| Hamming exhaustive and error patterns | 4 | Host C99 | PASS | `tests/test_hamming*.c` |
-| SECDED exhaustive/error patterns | 2 | Host C99 | PASS | `tests/test_secded*.c` |
-| Cross-module integration | 1 | Host C99 | PASS | `tests/test_integration.c` |
-| ESP32-S3 source evidence | 14 | ESP32-S3, 240 MHz | PASS in source records | `docs/hardware/*.md` |
-| Extracted ESP32-S3 integration run | 1 run, 10,000 randomized CRC32 cases plus exhaustive Hamming/SECDED cases | ESP32-S3 QFN56 rev0.2, 240 MHz | PASS | `hardware/esp32s3/certivox_hw/certivox_hw.ino` |
-
-## Tested functions
-
-All 14 public functions are exercised by the migrated tests. Coverage includes
-known vectors, null/invalid output pointers, empty input, exhaustive small
-domains, single-bit correction, double-bit rejection, reserved-bit rejection,
-CRC concatenation and deterministic seeded stress cases as reported by the
-source records.
-
-The integration test is new and only checks composition; it is not a substitute
-for the per-function tests.
-
-## Reproducibility
-
-```sh
-cmake -S . -B build -DCERTIVOX_BUILD_TESTS=ON -DCERTIVOX_BUILD_EXAMPLES=ON
-cmake --build build --config Release
-ctest --test-dir build --output-on-failure -C Release
-```
-
-For a warning-focused GCC build:
-
-```sh
-cmake -S . -B build-gcc -DCMAKE_C_COMPILER=gcc
-cmake --build build-gcc
-ctest --test-dir build-gcc --output-on-failure
-```
-
-## Test environment
-
-| Environment | Result |
+| API group | Direct verification |
 |---|---|
-| Windows host, MSVC 19.42.34444, Visual Studio 17 2022, Release | 15/15 PASS |
-| Windows host, GCC 16.1.0, Ninja, default release flags | 15/15 PASS |
-| Windows host, ClangCL 19.1.5 with Visual Studio 17 2022, Release | 15/15 PASS |
-| Windows host, GCC sanitizer build | NOT TESTED: MinGW linker could not find `libasan` and `libubsan` |
-| ESP32-S3 extracted firmware | PASS; COM37, 240 MHz, ESP32 core 3.3.10, 10,000 randomized CRC32 cases plus exhaustive Hamming/SECDED cases |
+| CRC-8/16/24/32/64 complete-buffer operations | 100,000 deterministic buffers per profile, table-driven references with a distinct byte-lookup implementation, standard known-answer vectors, empty input, null input/output and output preservation |
+| CRC-32 byte update | 100,000 deterministic raw-state/byte/polynomial cases across 1,000 polynomials; table-driven oracle; standard streaming equivalence |
+| CRC-32 combine | 100,000 deterministic A/B pairs checked against a direct table CRC of `A || B`; empty prefix/suffix, 65,536-byte suffix and an independent zlib 1.3.2 maximum-length vector |
+| Polynomial reflection | 100,000 deterministic valid full-width inputs, invalid width/polynomial and output preservation; exhaustive all valid polynomial values for widths 1..8 |
+| Hamming(7,4) encode/decode | All 16 payloads, all 128 received words against nearest-codeword oracle, all single-bit and 336 double-bit corruptions; double errors can miscorrect |
+| Hamming(8,4) encode/decode | All 16 payloads and all 256 received bytes against nearest-codeword oracle, including every single-/double-bit corruption and uncorrectable-output preservation |
+| SECDED(39,32) parity/check | 100,000 deterministic full-width words against a positional-mask parity reference; clean checks, 100,000 randomized singles and doubles; every 39 single and 741 double positions for five boundary/representative words |
 
-## Known gaps
+The 32-bit data domains are not exhaustively enumerated. Deterministic differential testing and finite codeword-error coverage are evidence, not a formal proof.
 
-- Sanitizer runs are not yet recorded in this reference extraction.
-- GNU-mode `clang.exe` is not the supported Windows configuration; use the
-  Visual Studio `ClangCL` toolset so the MSVC runtime libraries are available.
-- The extracted ESP32-S3 result is a real firmware run on COM37. Its reported
-  footprint includes Arduino/runtime and the test harness; the A/B isolated
-  delta is documented separately in `PERFORMANCE.md`.
-- Stack usage and sanitizer results remain unverified.
-- The product license is Apache-2.0 with copyright attribution to Vanderhell.
+## Local toolchain results
+
+Strict warning flags are enabled with `CERTIVOX_STRICT_WARNINGS=ON`: GCC/Clang use `-Wall -Wextra -Wpedantic -Werror`; MSVC uses `/W4 /WX`. CMake sets `C_STANDARD 99` and disables extensions for library and tests. GCC and Clang builds use an explicit C99 dialect; MSVC successfully compiles the C99 source subset, but CMake emits no `/std:c99` switch for MSVC.
+
+| Compiler | Configuration | Result |
+|---|---|---|
+| GCC 16.1.0 (MinGW UCRT) | Debug | PASS, 16/16 CTest |
+| GCC 16.1.0 (MinGW UCRT) | Release | PASS, 16/16 CTest |
+| ClangCL 19.1.5 (Visual Studio 17 2022) | Debug | PASS, 16/16 CTest |
+| ClangCL 19.1.5 (Visual Studio 17 2022) | Release | PASS, 16/16 CTest |
+| MSVC 19.42.34444 | Debug | PASS, 16/16 CTest |
+| MSVC 19.42.34444 | Release | PASS, 16/16 CTest |
+| GCC ASan (local Windows MinGW) | NOT RUN: linker cannot find `-lasan` |
+| GCC UBSan (local Windows MinGW) | NOT RUN: linker cannot find `-lubsan` |
+
+The MinGW sanitizer attempts failed during compiler link checks because the runtimes are absent; no sanitizer result is claimed locally. The remote GitHub Actions matrix is required for sanitizer evidence.
+
+## Reproduce
+
+Single-configuration GCC/Clang build:
+
+```sh
+cmake -S . -B build -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Release -DCERTIVOX_BUILD_TESTS=ON -DCERTIVOX_STRICT_WARNINGS=ON
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
+For Visual Studio multi-configuration builds, pass the same configuration to both build and CTest:
+
+```powershell
+cmake -S . -B build -DCERTIVOX_BUILD_TESTS=ON -DCERTIVOX_STRICT_WARNINGS=ON
+cmake --build build --config Release --parallel
+ctest --test-dir build -C Release --output-on-failure
+```
+
+## ESP32-S3 status
+
+**HW NOT VERIFIED for this audit.** The read-only Windows port inventory found Espressif USB serial devices at COM36, COM19 and COM37. COM37 is reserved; COM19 and COM36 may contain another project's firmware/data. Ports were enumerated by USB descriptor only; none were opened, reset, flashed or otherwise modified. No available board was authorized for Certivox, so no new hardware PASS or current performance claim is made.
+
+Existing records under `docs/hardware/` and the extracted sketch run are historical evidence. The individual source records identify COM36 and report per-API tests; the old extracted integration run is recorded as COM37, 240 MHz, with 10,000 seeded CRC32 cases plus exhaustive Hamming/SECDED cases. Neither is a newly executed run or current-device verification. Hardware source copies under `hardware/esp32s3/certivox_hw/impl/` currently match their corresponding `src/*.c` files byte-for-byte, but that source match does not make the old firmware run current.
+
+## Known limits
+
+- Host differential sampling is not exhaustive over all input lengths and data values.
+- The maximum CRC-combine suffix length has an independent fixed reference vector; no 4 GiB payload was materialized.
+- Ordinary Hamming(7,4) can miscorrect multi-bit errors. Extended Hamming and SECDED guarantees cover only one- and two-bit error patterns respectively.
+- CRC and ECC here are not cryptographic authentication or tamper protection.
+- Current hardware cycles, per-module flash/RAM and stack use are not measured.

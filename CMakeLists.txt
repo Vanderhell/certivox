@@ -4,6 +4,21 @@ project(certivox VERSION 0.1.0 LANGUAGES C)
 option(CERTIVOX_BUILD_TESTS "Build Certivox host tests" ON)
 option(CERTIVOX_BUILD_EXAMPLES "Build Certivox examples" ON)
 option(CERTIVOX_BUILD_BENCHMARK "Build the host smoke benchmark" OFF)
+option(CERTIVOX_STRICT_WARNINGS "Treat supported compiler warnings as errors" ON)
+
+function(certivox_apply_warnings target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4)
+        if(CERTIVOX_STRICT_WARNINGS)
+            target_compile_options(${target} PRIVATE /WX)
+        endif()
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+        if(CERTIVOX_STRICT_WARNINGS)
+            target_compile_options(${target} PRIVATE -Werror)
+        endif()
+    endif()
+endfunction()
 
 add_library(certivox STATIC
     src/cv_crc8_compute.c
@@ -25,11 +40,7 @@ add_library(certivox STATIC
 target_include_directories(certivox PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set_target_properties(certivox PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
 
-if(MSVC)
-    target_compile_options(certivox PRIVATE /W4)
-else()
-    target_compile_options(certivox PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+certivox_apply_warnings(certivox)
 
 if(CERTIVOX_BUILD_TESTS)
     enable_testing()
@@ -49,11 +60,13 @@ if(CERTIVOX_BUILD_TESTS)
         secded_check_u32
         crc_reflect_poly_u32
         integration
+        audit_differential
     )
     foreach(test_name IN LISTS CERTIVOX_TESTS)
         add_executable(certivox_test_${test_name} tests/test_${test_name}.c)
         target_link_libraries(certivox_test_${test_name} PRIVATE certivox)
         set_target_properties(certivox_test_${test_name} PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+        certivox_apply_warnings(certivox_test_${test_name})
         add_test(NAME ${test_name} COMMAND certivox_test_${test_name})
     endforeach()
 endif()
@@ -62,10 +75,12 @@ if(CERTIVOX_BUILD_EXAMPLES)
     add_executable(certivox_example examples/crc_and_ecc.c)
     target_link_libraries(certivox_example PRIVATE certivox)
     set_target_properties(certivox_example PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+    certivox_apply_warnings(certivox_example)
 endif()
 
 if(CERTIVOX_BUILD_BENCHMARK)
     add_executable(certivox_host_benchmark bench/host_benchmark.c)
     target_link_libraries(certivox_host_benchmark PRIVATE certivox)
     set_target_properties(certivox_host_benchmark PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+    certivox_apply_warnings(certivox_host_benchmark)
 endif()

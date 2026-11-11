@@ -1,245 +1,69 @@
-﻿# Certivox API reference
+# Certivox API reference
 
-This reference explains every public header in the Certivox product. It is generated from the current headers and test sources; the header remains authoritative when a detail conflicts.
+The public surface contains 14 callable C APIs. The declarations in `include/certivox/` define the ABI; these notes describe the behavior observed in the current implementations and direct tests. CRCs detect accidental errors and are not cryptographic authentication.
 
-## Reading the entries
-Each entry states the public symbol, implementation unit, contract, edge/failure behavior and a call extracted from the validating test source. The examples are evidence-oriented; adapt buffer ownership and numeric units to the application.
+## CRC operations
 
-## include/certivox/cv_crc_combine_u32.h
+### `cv_crc8_compute`
 
-**Public symbol:** cv_crc_combine_u32
+Computes CRC-8/SMBus PEC: width 8, polynomial `0x07`, init `0`, xorout `0`, non-reflected. Accepts any readable byte buffer; `data == NULL` is accepted only when `length == 0`. Returns `false` for invalid pointers and leaves `*crc` unchanged on failure. Direct known-answer, empty/invalid-input, output-preservation and 100,000-case table-oracle tests are enabled.
 
-**Implementation unit:** src/cv_crc_combine_u32.c
+### `cv_crc16_compute`
 
-**Purpose and contract:** Combine finalized CRC-32/ISO-HDLC values for A and B into CRC(A || B). length_b is B's byte length; for an empty B its CRC must be zero.
+Computes CRC-16/MODBUS: width 16, reflected polynomial `0xA001` (normal form `0x8005`), init `0xFFFF`, xorout `0`. Pointer and failure contract matches CRC-8. Direct known-answer, empty/invalid-input, output-preservation and 100,000-case table-oracle tests are enabled.
 
-**Validation source:** tests/test_crc_combine_u32.c
+### `cv_crc24_compute`
 
-**Test-derived call:**
-```c
-cv_crc_combine_u32(crc_a,crc_b,(uint32_t)(sizeof(b)-1u))==expected);
-```
+Computes CRC-24/OpenPGP: width 24, polynomial `0x864CFB`, init `0xB704CE`, xorout `0`, non-reflected. The result is in the low 24 bits of the output. Pointer and failure contract matches CRC-8. Direct known-answer, empty/invalid-input, output-preservation and 100,000-case table-oracle tests are enabled.
 
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
+### `cv_crc32_compute`
 
-## include/certivox/cv_crc_reflect_poly_u32.h
+Computes CRC-32/ISO-HDLC: reflected polynomial `0xEDB88320`, init/xorout `UINT32_MAX`. Pointer and failure contract matches CRC-8. Direct known-answer, streaming equivalence, empty/invalid-input, output-preservation and 100,000-case table-oracle tests are enabled.
 
-**Public symbol:** cv_crc_reflect_poly_u32
+### `cv_crc64_compute`
 
-**Implementation unit:** src/cv_crc_reflect_poly_u32.c
+Computes CRC-64/ECMA-182: polynomial `0x42F0E1EBA9EA3693`, init `0`, xorout `0`, non-reflected. Pointer and failure contract matches CRC-8. Direct known-answer, empty/invalid-input, output-preservation and 100,000-case table-oracle tests are enabled.
 
-**Purpose and contract:** Reflect the low `width` bits of a CRC polynomial (implicit x^width term omitted). Width must be 1..32 and polynomial must fit that width.
+### `cv_crc_update_byte_u32`
 
-**Validation source:** tests/test_crc_reflect_poly_u32.c
+Advances a caller-owned raw CRC-32 state by one byte using a reflected polynomial. It does not apply initialization or final XOR and accepts every 32-bit state, byte, and polynomial bit pattern; it has no failure return. Differential tests cover 100,000 deterministic state/byte/polynomial combinations with a lookup-table reference.
 
-**Test-derived call:**
-```c
-cv_crc_reflect_poly_u32(0x07u,8u,&out)&&out==0xE0u);
-```
+### `cv_crc_combine_u32`
 
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
+Combines finalized CRC-32/ISO-HDLC values as `CRC(A || B)` using `CRC(A)`, `CRC(B)`, and the byte length of `B` (`uint32_t`). For an empty suffix, `CRC(B)` is zero and the result is `CRC(A)`. There is no status return to reject inconsistent CRC/length tuples. Tests compare 100,000 deterministic random segment pairs to a direct table-driven CRC of the concatenated bytes, include a 65,536-byte suffix and a `UINT32_MAX` length reference vector from zlib 1.3.2.
 
-## include/certivox/cv_crc_update_byte_u32.h
+### `cv_crc_reflect_poly_u32`
 
-**Public symbol:** cv_crc_update_byte_u32
+Reflects the low `width` polynomial bits; the implicit `x^width` term is not supplied. Valid widths are 1..32 and no polynomial bits may be set above `width`. Returns `false` for invalid width, polynomial or null output; output is preserved on failure. Tests include 100,000 deterministic valid inputs, invalid boundaries and exhaustive widths 1..8.
 
-**Implementation unit:** src/cv_crc_update_byte_u32.c
+## Error-correction operations
 
-**Purpose and contract:** Advance a reflected raw 32-bit CRC state by one byte. The polynomial is supplied in reflected form; callers own init and final xor conventions.
+### Hamming(7,4): `cv_hamming74_encode`, `cv_hamming74_decode`
 
-**Validation source:** tests/test_crc_update_byte_u32.c
+The encoder accepts nibbles 0..15 and emits even-parity code bits in the documented positions. Invalid nibble or null output returns failure without changing output. The decoder rejects bit 7 and null output; it corrects the syndrome-indicated bit and reports clean/nonzero syndrome. Single-bit correction is guaranteed. Multiple-bit errors are not reliably detected; exhaustive host coverage shows two-bit errors can be miscorrected as a different nibble. Decoder output is preserved only for invalid input.
 
-**Test-derived call:**
-```c
-cv_crc_update_byte_u32(crc,text[i],UINT32_C(0xEDB88320\);
-```
+### Extended Hamming(8,4): `cv_hamming84_encode`, `cv_hamming84_decode`
 
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
+The encoder accepts nibbles 0..15, adds overall even parity, and preserves output on invalid input. The decoder returns `INVALID` for a null output pointer, corrects any single-bit error, reports all double-bit errors as uncorrectable and preserves the caller's output for uncorrectable input. Three or more errors are outside the guarantee and may be misclassified.
 
-## include/certivox/cv_crc16_compute.h
+### SECDED(39,32): `cv_secded_parity_u32`, `cv_secded_check_u32`
 
-**Public symbol:** cv_crc16_compute
+The parity API maps 32 data bits into positions 1..38, stores six positional parity bits in check bits 0..5 and overall parity in bit 6. Check API returns `INVALID` for a null output pointer or reserved check bit 7, corrects any single-bit error across the 39-bit codeword, detects any double-bit error, and preserves the caller's output for reserved-bit or uncorrectable input. Three or more bit errors are outside the SECDED guarantee and may be miscorrected or appear clean. These functions do not protect against intentional modification.
 
-**Implementation unit:** src/cv_crc16_compute.c
+## Direct test mapping
 
-**Purpose and contract:** The public header contains the authoritative signature and input/output contract.
+| API | Direct test |
+|---|---|
+| `cv_crc8_compute` | `tests/test_crc8_compute.c` |
+| `cv_crc16_compute` | `tests/test_crc16_compute.c` |
+| `cv_crc24_compute` | `tests/test_crc24_compute.c` |
+| `cv_crc32_compute` | `tests/test_crc32_compute.c` |
+| `cv_crc64_compute` | `tests/test_crc64_compute.c` |
+| `cv_crc_update_byte_u32` | `tests/test_crc_update_byte_u32.c` |
+| `cv_crc_combine_u32` | `tests/test_crc_combine_u32.c` |
+| `cv_crc_reflect_poly_u32` | `tests/test_crc_reflect_poly_u32.c` |
+| `cv_hamming74_encode` / `cv_hamming74_decode` | `tests/test_hamming74_encode.c` / `tests/test_hamming74_decode.c` |
+| `cv_hamming84_encode` / `cv_hamming84_decode` | `tests/test_hamming84_encode.c` / `tests/test_hamming84_decode.c` |
+| `cv_secded_parity_u32` / `cv_secded_check_u32` | `tests/test_secded_parity_u32.c` / `tests/test_secded_check_u32.c` |
 
-**Validation source:** tests/test_crc16_compute.c
-
-**Test-derived call:**
-```c
-cv_crc16_compute(check,sizeof(check)-1u,&crc)&&crc==0x4B37u);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
-## include/certivox/cv_crc24_compute.h
-
-**Public symbol:** cv_crc24_compute
-
-**Implementation unit:** src/cv_crc24_compute.c
-
-**Purpose and contract:** The public header contains the authoritative signature and input/output contract.
-
-**Validation source:** tests/test_crc24_compute.c
-
-**Test-derived call:**
-```c
-cv_crc24_compute(check,sizeof(check)-1u,&crc)&&crc==0x21CF02u);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
-## include/certivox/cv_crc32_compute.h
-
-**Public symbol:** cv_crc32_compute
-
-**Implementation unit:** src/cv_crc32_compute.c
-
-**Purpose and contract:** The public header contains the authoritative signature and input/output contract.
-
-**Validation source:** tests/test_crc32_compute.c
-
-**Test-derived call:**
-```c
-cv_crc32_compute(check,sizeof(check)-1u,&crc)&&crc==UINT32_C(0xCBF43926\);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
-## include/certivox/cv_crc64_compute.h
-
-**Public symbol:** cv_crc64_compute
-
-**Implementation unit:** src/cv_crc64_compute.c
-
-**Purpose and contract:** The public header contains the authoritative signature and input/output contract.
-
-**Validation source:** tests/test_crc64_compute.c
-
-**Test-derived call:**
-```c
-cv_crc64_compute(check,sizeof(check)-1u,&crc)&&crc==UINT64_C(0x6C40DF5F0B497347\);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
-## include/certivox/cv_crc8_compute.h
-
-**Public symbol:** cv_crc8_compute
-
-**Implementation unit:** src/cv_crc8_compute.c
-
-**Purpose and contract:** The public header contains the authoritative signature and input/output contract.
-
-**Validation source:** tests/test_crc8_compute.c
-
-**Test-derived call:**
-```c
-cv_crc8_compute(check,sizeof(check)-1u,&crc)&&crc==0xF4u);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
-## include/certivox/cv_hamming74_decode.h
-
-**Public symbol:** cv_hamming74_decode
-
-**Implementation unit:** src/cv_hamming74_decode.c
-
-**Purpose and contract:** Decode even-parity Hamming(7,4). A nonzero syndrome flips its indicated bit and is reported as such; only a single-bit error is guaranteed corrected.
-
-**Validation source:** tests/test_hamming74_decode.c
-
-**Test-derived call:**
-```c
-cv_hamming74_decode(code,&decoded)==CV_HAMMING74_SYNDROME_ZERO&&decoded==n);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
-## include/certivox/cv_hamming74_encode.h
-
-**Public symbol:** cv_hamming74_encode
-
-**Implementation unit:** src/cv_hamming74_encode.c
-
-**Purpose and contract:** Encode nibble d3..d0 into even-parity Hamming(7,4), positions numbered 1..7 in code bits 0..6; parity occupies positions 1,2,4.
-
-**Validation source:** tests/test_hamming74_decode.c
-
-**Test-derived call:**
-```c
-cv_hamming74_encode(n,&code\);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
-## include/certivox/cv_hamming84_decode.h
-
-**Public symbol:** cv_hamming84_decode
-
-**Implementation unit:** src/cv_hamming84_decode.c
-
-**Purpose and contract:** Decode extended even-parity Hamming(8,4): correct single errors, detect double errors. Output is unchanged on invalid or uncorrectable input.
-
-**Validation source:** tests/test_hamming84_decode.c
-
-**Test-derived call:**
-```c
-cv_hamming84_decode(code,&out)==CV_HAMMING84_CLEAN&&out==nibble);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
-## include/certivox/cv_hamming84_encode.h
-
-**Public symbol:** cv_hamming84_encode
-
-**Implementation unit:** src/cv_hamming84_encode.c
-
-**Purpose and contract:** Encode nibble with Hamming(8,4): positions 1..7 match Hamming(7,4), bit 7 is overall even parity.
-
-**Validation source:** tests/test_hamming84_decode.c
-
-**Test-derived call:**
-```c
-cv_hamming84_encode(nibble,&code\);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
-## include/certivox/cv_secded_check_u32.h
-
-**Public symbol:** cv_secded_check_u32
-
-**Implementation unit:** src/cv_secded_check_u32.c
-
-**Purpose and contract:** Check/correct extended Hamming(39,32). Check bits 0..5 are positional parity, bit 6 is overall parity; bit 7 is invalid. Output is unchanged for invalid or uncorrectable inputs.
-
-**Validation source:** tests/test_integration.c
-
-**Test-derived call:**
-```c
-cv_secded_check_u32(word, check_bits, &corrected) == CV_SECDED_CLEAN);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
-## include/certivox/cv_secded_parity_u32.h
-
-**Public symbol:** cv_secded_parity_u32
-
-**Implementation unit:** src/cv_secded_parity_u32.c
-
-**Purpose and contract:** Return seven check bits for extended even-parity Hamming(39,32): bits 0..5 are Hamming parity for positions 1,2,4,8,16,32; bit 6 is overall parity.
-
-**Validation source:** tests/test_integration.c
-
-**Test-derived call:**
-```c
-cv_secded_parity_u32(word, &check_bits\);
-```
-
-**Integration notes:** use the exact fixed-width types and units shown in the declaration; check the boolean/status return before consuming an output pointer; do not assume overlap, rounding or overflow behavior beyond the contract above.
-
+`tests/test_audit_differential.c` independently exercises all 14 APIs. Checks use explicit `CHECK` logic, not `assert()`, so they remain active with `NDEBUG`. Matrix results and limits are in `docs/TESTING.md`.
