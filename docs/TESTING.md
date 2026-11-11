@@ -33,6 +33,10 @@ Strict warning flags are enabled with `CERTIVOX_STRICT_WARNINGS=ON`: GCC/Clang u
 
 The MinGW sanitizer attempts failed during compiler link checks because the runtimes are absent; no sanitizer result is claimed locally. The remote GitHub Actions matrix is required for sanitizer evidence.
 
+## Remote GitHub Actions
+
+Workflow [43015999514](https://github.com/Vanderhell/certivox/actions/runs/43015999514) on commit `f758fded8e2db92df42deeda88a72bdfcd5be496` completed **8/8 PASS**: GCC Debug/Release, Clang Debug/Release, MSVC Debug/Release, GCC ASan and GCC UBSan. This run includes the new differential suite and supplies sanitizer evidence unavailable from the local MinGW installation.
+
 ## Reproduce
 
 Single-configuration GCC/Clang build:
