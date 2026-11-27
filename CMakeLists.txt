@@ -1,5 +1,5 @@
 ﻿cmake_minimum_required(VERSION 3.16)
-project(Certivox VERSION 0.2.0 LANGUAGES C CXX)
+project(Certivox VERSION 0.2.0 LANGUAGES C)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -53,6 +53,7 @@ certivox_apply_warnings(certivox)
 
 if(CERTIVOX_BUILD_TESTS)
     enable_testing()
+    enable_language(CXX)
     set(CERTIVOX_TESTS
         crc8_compute crc16_compute crc24_compute crc32_compute crc64_compute
         crc_update_byte_u32 crc_combine_u32 crc_reflect_poly_u32

@@ -1,4 +1,4 @@
-﻿# Certivox
+# Certivox
 ![CI](https://github.com/Vanderhell/certivox/actions/workflows/ci.yml/badge.svg) ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg) ![Language](https://img.shields.io/badge/language-C99-informational.svg)
 
 ![Certivox banner](docs/banner.svg)
@@ -26,6 +26,16 @@ ctest --test-dir build --output-on-failure
 
 For package integration, link `Certivox::Certivox` from `find_package(Certivox CONFIG REQUIRED)`. For a minimal integration, include only the required public header and compile its matching `src/certivox_*.c` source unit and any dependency listed in the API reference. Tests, examples and benchmarks are opt-in and off by default.
 
+## Consume Certivox
+
+```cmake
+find_package(Certivox CONFIG REQUIRED)
+target_link_libraries(your_target PRIVATE Certivox::Certivox)
+```
+
+`add_subdirectory()` is also supported. With `CERTIVOX_BUILD_TESTS=OFF` (the default), dependency configuration requires only a C compiler. The optional test suite also enables C++ to compile the public-header smoke test.
+
+For direct C99 integration, compile the required `src/certivox_*.c` source units. `certivox_hamming84_encode` additionally requires `certivox_hamming74_encode`.
 ## Documentation
 
 | Need | Read |
