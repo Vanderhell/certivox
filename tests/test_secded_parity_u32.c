@@ -1,4 +1,4 @@
-#include <certivox/cv_secded_parity_u32.h>
+#include <certivox/secded_parity_u32.h>
 #include <stdint.h>
 #include <stdio.h>
 #define CHECK(v) do { if (!(v)) { fprintf(stderr,"failed line %d\n",__LINE__); return 1; } } while (0)
@@ -7,15 +7,15 @@ static unsigned distance(uint64_t a,uint64_t b){unsigned d=0;uint64_t v=a^b;whil
 int main(void)
 {
     uint64_t words[256];uint8_t checks=0xFFu;
-    CHECK(cv_secded_parity_u32(0u,&checks)&&checks==0u);
+    CHECK(certivox_secded_parity_u32(0u,&checks)&&checks==0u);
     for(uint32_t data=0u;data<256u;++data){
-        CHECK(cv_secded_parity_u32(data,&checks));
+        CHECK(certivox_secded_parity_u32(data,&checks));
         words[data]=codeword(data,checks);
         for(unsigned p=1u;p<=38u;++p)if((p&(p-1u))==0u){unsigned parity=0;for(unsigned pos=1u;pos<=38u;++pos)if((pos&p)!=0u)parity^=(unsigned)((words[data]>>(pos-1u))&1u);CHECK(parity==0u);}
         CHECK((distance(words[data],0u)&1u)==0u);
     }
     for(unsigned a=0;a<256u;++a)for(unsigned b=0;b<256u;++b)if(a!=b)CHECK(distance(words[a],words[b])>=4u);
-    for(unsigned bit=0;bit<32u;++bit){CHECK(cv_secded_parity_u32(UINT32_C(1)<<bit,&checks));CHECK(distance(codeword(UINT32_C(1)<<bit,checks),0u)>=4u);}
-    CHECK(!cv_secded_parity_u32(0u,NULL));
+    for(unsigned bit=0;bit<32u;++bit){CHECK(certivox_secded_parity_u32(UINT32_C(1)<<bit,&checks));CHECK(distance(codeword(UINT32_C(1)<<bit,checks),0u)>=4u);}
+    CHECK(!certivox_secded_parity_u32(0u,NULL));
     return 0;
 }

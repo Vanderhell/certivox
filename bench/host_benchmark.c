@@ -1,4 +1,4 @@
-#include <certivox/cv_crc32_compute.h>
+﻿#include <certivox/crc32_compute.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
@@ -10,7 +10,7 @@ int main(void)
     const clock_t start = clock();
     for (unsigned i = 0u; i < 100000u; ++i) {
         uint32_t crc = 0u;
-        (void)cv_crc32_compute(payload, sizeof(payload), &crc);
+        (void)certivox_crc32_compute(payload, sizeof(payload), &crc);
         sink ^= crc;
     }
     const clock_t elapsed = clock() - start;

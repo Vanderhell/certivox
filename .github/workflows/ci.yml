@@ -10,12 +10,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compiler: [gcc, clang]
-        build_type: [Debug, Release]
+        include:
+          - compiler: gcc
+            cxx: g++
+            build_type: Debug
+          - compiler: gcc
+            cxx: g++
+            build_type: Release
+          - compiler: clang
+            cxx: clang++
+            build_type: Debug
+          - compiler: clang
+            cxx: clang++
+            build_type: Release
     steps:
       - uses: actions/checkout@v4
       - name: Configure strict C99
-        run: cmake -S . -B build -DCMAKE_C_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCERTIVOX_BUILD_TESTS=ON -DCERTIVOX_BUILD_EXAMPLES=ON -DCERTIVOX_STRICT_WARNINGS=ON
+        run: cmake -S . -B build -DCMAKE_C_COMPILER=${{ matrix.compiler }} -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCERTIVOX_BUILD_TESTS=ON -DCERTIVOX_BUILD_EXAMPLES=ON -DCERTIVOX_STRICT_WARNINGS=ON
       - name: Build
         run: cmake --build build --parallel
       - name: Test
@@ -46,7 +57,7 @@ jobs:
         run: >-
           cmake -S . -B build -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Debug
           -DCERTIVOX_BUILD_TESTS=ON -DCERTIVOX_BUILD_EXAMPLES=ON -DCERTIVOX_STRICT_WARNINGS=ON
-          -DCMAKE_C_FLAGS="-fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer -fno-sanitize-recover=all"
+          -DCMAKE_C_FLAGS="-fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer -fno-sanitize-recover=all" -DCMAKE_CXX_FLAGS="-fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer -fno-sanitize-recover=all"
           -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=${{ matrix.sanitizer }} -fno-omit-frame-pointer -fno-sanitize-recover=all"
       - name: Build
         run: cmake --build build --parallel

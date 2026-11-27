@@ -1,17 +1,17 @@
-#include <certivox/cv_crc8_compute.h>
-#include <certivox/cv_crc16_compute.h>
-#include <certivox/cv_crc24_compute.h>
-#include <certivox/cv_crc32_compute.h>
-#include <certivox/cv_crc64_compute.h>
-#include <certivox/cv_crc_update_byte_u32.h>
-#include <certivox/cv_crc_combine_u32.h>
-#include <certivox/cv_crc_reflect_poly_u32.h>
-#include <certivox/cv_hamming74_encode.h>
-#include <certivox/cv_hamming74_decode.h>
-#include <certivox/cv_hamming84_encode.h>
-#include <certivox/cv_hamming84_decode.h>
-#include <certivox/cv_secded_parity_u32.h>
-#include <certivox/cv_secded_check_u32.h>
+#include <certivox/crc8_compute.h>
+#include <certivox/crc16_compute.h>
+#include <certivox/crc24_compute.h>
+#include <certivox/crc32_compute.h>
+#include <certivox/crc64_compute.h>
+#include <certivox/crc_update_byte_u32.h>
+#include <certivox/crc_combine_u32.h>
+#include <certivox/crc_reflect_poly_u32.h>
+#include <certivox/hamming74_encode.h>
+#include <certivox/hamming74_decode.h>
+#include <certivox/hamming84_encode.h>
+#include <certivox/hamming84_decode.h>
+#include <certivox/secded_parity_u32.h>
+#include <certivox/secded_check_u32.h>
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -192,7 +192,7 @@ static uint8_t ref_h84_encode(uint8_t nibble)
     return (uint8_t)(low | (uint8_t)((popcount_u8(low) & 1u) << 7u));
 }
 
-static cv_hamming74_status ref_h74_decode(uint8_t received, uint8_t *nibble)
+static certivox_hamming74_status ref_h74_decode(uint8_t received, uint8_t *nibble)
 {
     unsigned best_distance = 8u;
     uint8_t best = 0u;
@@ -205,10 +205,10 @@ static cv_hamming74_status ref_h74_decode(uint8_t received, uint8_t *nibble)
         }
     }
     *nibble = best;
-    return best_distance == 0u ? CV_HAMMING74_SYNDROME_ZERO : CV_HAMMING74_SYNDROME_NONZERO;
+    return best_distance == 0u ? CERTIVOX_HAMMING74_SYNDROME_ZERO : CERTIVOX_HAMMING74_SYNDROME_NONZERO;
 }
 
-static cv_hamming84_status ref_h84_decode(uint8_t received, uint8_t *nibble)
+static certivox_hamming84_status ref_h84_decode(uint8_t received, uint8_t *nibble)
 {
     unsigned best_distance = 9u;
     uint8_t best = 0u;
@@ -222,13 +222,13 @@ static cv_hamming84_status ref_h84_decode(uint8_t received, uint8_t *nibble)
     }
     if (best_distance == 0u) {
         *nibble = best;
-        return CV_HAMMING84_CLEAN;
+        return CERTIVOX_HAMMING84_CLEAN;
     }
     if (best_distance == 1u) {
         *nibble = best;
-        return CV_HAMMING84_CORRECTED;
+        return CERTIVOX_HAMMING84_CORRECTED;
     }
-    return CV_HAMMING84_UNCORRECTABLE;
+    return CERTIVOX_HAMMING84_UNCORRECTABLE;
 }
 
 static uint8_t ref_secded_parity(uint32_t data)
@@ -250,20 +250,20 @@ static uint8_t ref_secded_parity(uint32_t data)
     return parity;
 }
 
-static cv_secded_status ref_secded_check(uint32_t data, uint8_t checks, uint32_t *corrected)
+static certivox_secded_status ref_secded_check(uint32_t data, uint8_t checks, uint32_t *corrected)
 {
     const uint8_t expected = ref_secded_parity(data);
     const uint8_t syndrome = (uint8_t)((checks ^ expected) & UINT8_C(0x3F));
     const unsigned overall = (popcount_u32(data) + popcount_u8((uint8_t)(checks & 0x7Fu))) & 1u;
     unsigned data_bit = 0u;
     unsigned position;
-    if ((checks & UINT8_C(0x80)) != 0u) return CV_SECDED_INVALID;
+    if ((checks & UINT8_C(0x80)) != 0u) return CERTIVOX_SECDED_INVALID;
     if (overall == 0u) {
-        if (syndrome != 0u) return CV_SECDED_UNCORRECTABLE;
+        if (syndrome != 0u) return CERTIVOX_SECDED_UNCORRECTABLE;
         *corrected = data;
-        return CV_SECDED_CLEAN;
+        return CERTIVOX_SECDED_CLEAN;
     }
-    if (syndrome > 38u) return CV_SECDED_UNCORRECTABLE;
+    if (syndrome > 38u) return CERTIVOX_SECDED_UNCORRECTABLE;
     *corrected = data;
     if (syndrome != 0u) {
         for (position = 1u; position <= 38u; ++position) {
@@ -275,7 +275,7 @@ static cv_secded_status ref_secded_check(uint32_t data, uint8_t checks, uint32_t
             ++data_bit;
         }
     }
-    return CV_SECDED_CORRECTED;
+    return CERTIVOX_SECDED_CORRECTED;
 }
 
 static void make_reflected_table(uint32_t polynomial, uint32_t table[256])
@@ -306,11 +306,11 @@ static int test_crc_differential(void)
         uint64_t c64 = 0u;
         uint32_t stream = UINT32_MAX;
         for (i = 0u; i < sizeof(payload); ++i) payload[i] = (uint8_t)random_u32();
-        CHECK(cv_crc8_compute(payload, length, &c8) && c8 == ref_crc8(payload, length));
-        CHECK(cv_crc16_compute(payload, length, &c16) && c16 == ref_crc16(payload, length));
-        CHECK(cv_crc24_compute(payload, length, &c24) && c24 == ref_crc24(payload, length));
-        CHECK(cv_crc32_compute(payload, length, &c32) && c32 == ref_crc32(payload, length));
-        CHECK(cv_crc64_compute(payload, length, &c64) && c64 == ref_crc64(payload, length));
+        CHECK(certivox_crc8_compute(payload, length, &c8) && c8 == ref_crc8(payload, length));
+        CHECK(certivox_crc16_compute(payload, length, &c16) && c16 == ref_crc16(payload, length));
+        CHECK(certivox_crc24_compute(payload, length, &c24) && c24 == ref_crc24(payload, length));
+        CHECK(certivox_crc32_compute(payload, length, &c32) && c32 == ref_crc32(payload, length));
+        CHECK(certivox_crc64_compute(payload, length, &c64) && c64 == ref_crc64(payload, length));
         for (i = 0u; i < length; ++i) {
             stream = ref_crc_update(stream, payload[i], table32);
         }
@@ -329,15 +329,15 @@ static int test_crc_helpers(void)
         uint32_t reflected = UINT32_C(0xA5A55A5A);
         if (width < 32u) mask = (UINT32_C(1) << width) - 1u;
         polynomial &= mask;
-        CHECK(cv_crc_reflect_poly_u32(polynomial, (uint8_t)width, &reflected));
+        CHECK(certivox_crc_reflect_poly_u32(polynomial, (uint8_t)width, &reflected));
         CHECK(reflected == ref_reflect(polynomial, width));
     }
     {
         uint32_t out = UINT32_C(0xA5A55A5A);
-        CHECK(!cv_crc_reflect_poly_u32(1u, 0u, &out) && out == UINT32_C(0xA5A55A5A));
-        CHECK(!cv_crc_reflect_poly_u32(0u, 33u, &out) && out == UINT32_C(0xA5A55A5A));
-        CHECK(!cv_crc_reflect_poly_u32(UINT32_C(0x100), 8u, &out) && out == UINT32_C(0xA5A55A5A));
-        CHECK(!cv_crc_reflect_poly_u32(0u, 8u, NULL));
+        CHECK(!certivox_crc_reflect_poly_u32(1u, 0u, &out) && out == UINT32_C(0xA5A55A5A));
+        CHECK(!certivox_crc_reflect_poly_u32(0u, 33u, &out) && out == UINT32_C(0xA5A55A5A));
+        CHECK(!certivox_crc_reflect_poly_u32(UINT32_C(0x100), 8u, &out) && out == UINT32_C(0xA5A55A5A));
+        CHECK(!certivox_crc_reflect_poly_u32(0u, 8u, NULL));
     }
     for (trial = 0u; trial < 1000u; ++trial) {
         uint32_t table[256];
@@ -347,7 +347,7 @@ static int test_crc_helpers(void)
         for (j = 0u; j < 100u; ++j) {
             const uint32_t state = random_u32();
             const uint8_t byte = (uint8_t)random_u32();
-            CHECK(cv_crc_update_byte_u32(state, byte, polynomial)
+            CHECK(certivox_crc_update_byte_u32(state, byte, polynomial)
                 == ref_crc_update(state, byte, table));
         }
     }
@@ -369,7 +369,7 @@ static int test_crc_combine(void)
         for (i = 0u; i < blen; ++i) b[i] = (uint8_t)random_u32();
         for (i = 0u; i < alen; ++i) joined[i] = a[i];
         for (i = 0u; i < blen; ++i) joined[alen + i] = b[i];
-        CHECK(cv_crc_combine_u32(ref_crc32(a, alen), ref_crc32(b, blen), (uint32_t)blen)
+        CHECK(certivox_crc_combine_u32(ref_crc32(a, alen), ref_crc32(b, blen), (uint32_t)blen)
             == ref_crc32(joined, alen + blen));
     }
     {
@@ -381,13 +381,13 @@ static int test_crc_combine(void)
         for (i = 0u; i < sizeof(long_b); ++i) long_b[i] = (uint8_t)(i * 29u + 17u);
         crc_a = ref_crc32(prefix, sizeof(prefix));
         crc_b = ref_crc32(long_b, sizeof(long_b));
-        CHECK(cv_crc_combine_u32(crc_a, crc_b, (uint32_t)sizeof(long_b))
+        CHECK(certivox_crc_combine_u32(crc_a, crc_b, (uint32_t)sizeof(long_b))
             == ref_crc32_concat(prefix, sizeof(prefix), long_b, sizeof(long_b)));
-        CHECK(cv_crc_combine_u32(0u, crc_b, (uint32_t)sizeof(long_b)) == crc_b);
+        CHECK(certivox_crc_combine_u32(0u, crc_b, (uint32_t)sizeof(long_b)) == crc_b);
     }
-    CHECK(cv_crc_combine_u32(0u, 0u, UINT32_MAX) == 0u);
+    CHECK(certivox_crc_combine_u32(0u, 0u, UINT32_MAX) == 0u);
     /* Independent zlib 1.3.2 crc32_combine64 boundary vector. */
-    CHECK(cv_crc_combine_u32(UINT32_C(0x12345678), UINT32_C(0x9ABCDEF0), UINT32_MAX)
+    CHECK(certivox_crc_combine_u32(UINT32_C(0x12345678), UINT32_C(0x9ABCDEF0), UINT32_MAX)
         == UINT32_C(0x88888888));
     return 0;
 }
@@ -397,16 +397,16 @@ static int test_hamming_exhaustive(void)
     unsigned value;
     for (value = 0u; value < 16u; ++value) {
         uint8_t actual = UINT8_C(0xA5);
-        CHECK(cv_hamming74_encode((uint8_t)value, &actual));
+        CHECK(certivox_hamming74_encode((uint8_t)value, &actual));
         CHECK(actual == (uint8_t)ref_h74_encode((uint8_t)value));
-        CHECK(cv_hamming84_encode((uint8_t)value, &actual));
+        CHECK(certivox_hamming84_encode((uint8_t)value, &actual));
         CHECK(actual == ref_h84_encode((uint8_t)value));
     }
     for (value = 0u; value < 128u; ++value) {
         uint8_t expected = UINT8_C(0xA5);
         uint8_t actual = UINT8_C(0xA5);
-        const cv_hamming74_status ref_status = ref_h74_decode((uint8_t)value, &expected);
-        CHECK(cv_hamming74_decode((uint8_t)value, &actual) == ref_status && actual == expected);
+        const certivox_hamming74_status ref_status = ref_h74_decode((uint8_t)value, &expected);
+        CHECK(certivox_hamming74_decode((uint8_t)value, &actual) == ref_status && actual == expected);
     }
     for (value = 0u; value < 16u; ++value) {
         const uint8_t code = (uint8_t)ref_h74_encode((uint8_t)value);
@@ -417,9 +417,9 @@ static int test_hamming_exhaustive(void)
                 uint8_t expected = UINT8_C(0xA5);
                 uint8_t actual = UINT8_C(0xA5);
                 const uint8_t damaged = (uint8_t)(code ^ (uint8_t)(1u << a) ^ (uint8_t)(1u << b));
-                const cv_hamming74_status ref_status = ref_h74_decode(damaged, &expected);
-                const cv_hamming74_status status = cv_hamming74_decode(damaged, &actual);
-                CHECK(ref_status == CV_HAMMING74_SYNDROME_NONZERO);
+                const certivox_hamming74_status ref_status = ref_h74_decode(damaged, &expected);
+                const certivox_hamming74_status status = certivox_hamming74_decode(damaged, &actual);
+                CHECK(ref_status == CERTIVOX_HAMMING74_SYNDROME_NONZERO);
                 CHECK(status == ref_status && actual == expected && actual != (uint8_t)value);
             }
         }
@@ -427,22 +427,22 @@ static int test_hamming_exhaustive(void)
     for (value = 0u; value < 256u; ++value) {
         uint8_t expected = UINT8_C(0xA5);
         uint8_t actual = UINT8_C(0xA5);
-        const cv_hamming84_status ref_status = ref_h84_decode((uint8_t)value, &expected);
-        const cv_hamming84_status status = cv_hamming84_decode((uint8_t)value, &actual);
+        const certivox_hamming84_status ref_status = ref_h84_decode((uint8_t)value, &expected);
+        const certivox_hamming84_status status = certivox_hamming84_decode((uint8_t)value, &actual);
         CHECK(status == ref_status);
-        if (status == CV_HAMMING84_UNCORRECTABLE) CHECK(actual == UINT8_C(0xA5));
+        if (status == CERTIVOX_HAMMING84_UNCORRECTABLE) CHECK(actual == UINT8_C(0xA5));
         else CHECK(actual == expected);
     }
     {
         uint8_t output = UINT8_C(0xA5);
-        CHECK(!cv_hamming74_encode(16u, &output) && output == UINT8_C(0xA5));
-        CHECK(cv_hamming74_decode(UINT8_C(0x80), &output) == CV_HAMMING74_INVALID
+        CHECK(!certivox_hamming74_encode(16u, &output) && output == UINT8_C(0xA5));
+        CHECK(certivox_hamming74_decode(UINT8_C(0x80), &output) == CERTIVOX_HAMMING74_INVALID
             && output == UINT8_C(0xA5));
-        CHECK(!cv_hamming84_encode(16u, &output) && output == UINT8_C(0xA5));
-        CHECK(cv_hamming74_decode(0u, NULL) == CV_HAMMING74_INVALID);
-        CHECK(cv_hamming84_decode(0u, NULL) == CV_HAMMING84_INVALID);
-        CHECK(!cv_hamming74_encode(0u, NULL));
-        CHECK(!cv_hamming84_encode(0u, NULL));
+        CHECK(!certivox_hamming84_encode(16u, &output) && output == UINT8_C(0xA5));
+        CHECK(certivox_hamming74_decode(0u, NULL) == CERTIVOX_HAMMING74_INVALID);
+        CHECK(certivox_hamming84_decode(0u, NULL) == CERTIVOX_HAMMING84_INVALID);
+        CHECK(!certivox_hamming74_encode(0u, NULL));
+        CHECK(!certivox_hamming84_encode(0u, NULL));
     }
     return 0;
 }
@@ -476,15 +476,15 @@ static int test_secded(void)
         uint8_t checks = UINT8_C(0xA5);
         uint32_t output = UINT32_C(0xA5A5A5A5);
         unsigned a;
-        CHECK(cv_secded_parity_u32(original, &checks));
+        CHECK(certivox_secded_parity_u32(original, &checks));
         CHECK(checks == ref_secded_parity(original));
-        CHECK(cv_secded_check_u32(original, checks, &output) == CV_SECDED_CLEAN && output == original);
+        CHECK(certivox_secded_check_u32(original, checks, &output) == CERTIVOX_SECDED_CLEAN && output == original);
         for (a = 1u; a <= 39u; ++a) {
             uint32_t damaged = original;
             uint8_t damaged_checks = checks;
             output = UINT32_C(0xA5A5A5A5);
             flip_secded_position(&damaged, &damaged_checks, a);
-            CHECK(cv_secded_check_u32(damaged, damaged_checks, &output) == CV_SECDED_CORRECTED
+            CHECK(certivox_secded_check_u32(damaged, damaged_checks, &output) == CERTIVOX_SECDED_CORRECTED
                 && output == original);
             for (unsigned b = a + 1u; b <= 39u; ++b) {
                 uint32_t double_data = original;
@@ -492,8 +492,8 @@ static int test_secded(void)
                 output = UINT32_C(0xA5A5A5A5);
                 flip_secded_position(&double_data, &double_checks, a);
                 flip_secded_position(&double_data, &double_checks, b);
-                CHECK(cv_secded_check_u32(double_data, double_checks, &output)
-                    == CV_SECDED_UNCORRECTABLE && output == UINT32_C(0xA5A5A5A5));
+                CHECK(certivox_secded_check_u32(double_data, double_checks, &output)
+                    == CERTIVOX_SECDED_UNCORRECTABLE && output == UINT32_C(0xA5A5A5A5));
             }
         }
     }
@@ -507,8 +507,8 @@ static int test_secded(void)
         unsigned bit_a = (unsigned)(random_u32() % 39u) + 1u;
         unsigned bit_b = (unsigned)(random_u32() % 38u) + 1u;
         if (bit_b >= bit_a) ++bit_b;
-        CHECK(cv_secded_parity_u32(original, &actual_checks) && actual_checks == checks);
-        CHECK(cv_secded_check_u32(original, checks, &output) == CV_SECDED_CLEAN && output == original);
+        CHECK(certivox_secded_parity_u32(original, &actual_checks) && actual_checks == checks);
+        CHECK(certivox_secded_check_u32(original, checks, &output) == CERTIVOX_SECDED_CLEAN && output == original);
 
         damaged = original;
         damaged_checks = checks;
@@ -516,8 +516,8 @@ static int test_secded(void)
         output = UINT32_C(0xA5A5A5A5);
         {
             uint32_t reference_output = UINT32_C(0xA5A5A5A5);
-            const cv_secded_status actual_status = cv_secded_check_u32(damaged, damaged_checks, &output);
-            const cv_secded_status reference_status = ref_secded_check(damaged, damaged_checks, &reference_output);
+            const certivox_secded_status actual_status = certivox_secded_check_u32(damaged, damaged_checks, &output);
+            const certivox_secded_status reference_status = ref_secded_check(damaged, damaged_checks, &reference_output);
             CHECK(actual_status == reference_status && output == reference_output);
         }
         CHECK(output == original);
@@ -527,16 +527,16 @@ static int test_secded(void)
         flip_secded_position(&damaged, &damaged_checks, bit_a);
         flip_secded_position(&damaged, &damaged_checks, bit_b);
         output = UINT32_C(0xA5A5A5A5);
-        CHECK(cv_secded_check_u32(damaged, damaged_checks, &output)
-            == CV_SECDED_UNCORRECTABLE && output == UINT32_C(0xA5A5A5A5));
+        CHECK(certivox_secded_check_u32(damaged, damaged_checks, &output)
+            == CERTIVOX_SECDED_UNCORRECTABLE && output == UINT32_C(0xA5A5A5A5));
     }
     {
         uint8_t checks = 0u;
         uint32_t output = UINT32_C(0xA5A5A5A5);
-        CHECK(!cv_secded_parity_u32(0u, NULL));
-        CHECK(cv_secded_check_u32(0u, UINT8_C(0x80), &output) == CV_SECDED_INVALID
+        CHECK(!certivox_secded_parity_u32(0u, NULL));
+        CHECK(certivox_secded_check_u32(0u, UINT8_C(0x80), &output) == CERTIVOX_SECDED_INVALID
             && output == UINT32_C(0xA5A5A5A5));
-        CHECK(cv_secded_check_u32(0u, checks, NULL) == CV_SECDED_INVALID);
+        CHECK(certivox_secded_check_u32(0u, checks, NULL) == CERTIVOX_SECDED_INVALID);
     }
     return 0;
 }

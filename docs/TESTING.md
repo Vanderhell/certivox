@@ -18,24 +18,24 @@ The 32-bit data domains are not exhaustively enumerated. Deterministic different
 
 ## Local toolchain results
 
-Strict warning flags are enabled with `CERTIVOX_STRICT_WARNINGS=ON`: GCC/Clang use `-Wall -Wextra -Wpedantic -Werror`; MSVC uses `/W4 /WX`. CMake sets `C_STANDARD 99` and disables extensions for library and tests. GCC and Clang builds use an explicit C99 dialect; MSVC successfully compiles the C99 source subset, but CMake emits no `/std:c99` switch for MSVC.
+Strict warnings are enabled by `CERTIVOX_STRICT_WARNINGS=ON`: GCC/Clang use `-Wall -Wextra -Wpedantic -Werror`; MSVC uses `/W4 /WX`. The production library and C tests compile as ISO C99 with extensions disabled. All checks are explicit `CHECK` logic and remain active in Release. The suite contains 16 C behavioral tests, 14 isolated C public-header compilation tests, and one aggregate C++ header/link smoke test (31 CTest entries).
 
 | Compiler | Configuration | Result |
 |---|---|---|
-| GCC 16.1.0 (MinGW UCRT) | Debug | PASS, 16/16 CTest |
-| GCC 16.1.0 (MinGW UCRT) | Release | PASS, 16/16 CTest |
-| ClangCL 19.1.5 (Visual Studio 17 2022) | Debug | PASS, 16/16 CTest |
-| ClangCL 19.1.5 (Visual Studio 17 2022) | Release | PASS, 16/16 CTest |
-| MSVC 19.42.34444 | Debug | PASS, 16/16 CTest |
-| MSVC 19.42.34444 | Release | PASS, 16/16 CTest |
-| GCC ASan (local Windows MinGW) | NOT RUN: linker cannot find `-lasan` |
-| GCC UBSan (local Windows MinGW) | NOT RUN: linker cannot find `-lubsan` |
+| GCC 16.1.0 MinGW UCRT | Debug | PASS, 31/31 CTest |
+| GCC 16.1.0 MinGW UCRT | Release | PASS, 31/31 CTest |
+| ClangCL 19.1.5 (Visual Studio 17 2022) | Debug | PASS, 31/31 CTest |
+| ClangCL 19.1.5 (Visual Studio 17 2022) | Release | PASS, 31/31 CTest |
+| MSVC 19.42.34444 | Debug | PASS, 31/31 CTest |
+| MSVC 19.42.34444 | Release | PASS, 31/31 CTest |
+| GCC ASan | NOT RUN: MinGW linker lacks `-lasan`; WSL process creation returned `E_ACCESSDENIED` |
+| GCC UBSan | NOT RUN: MinGW linker lacks `-lubsan`; WSL process creation returned `E_ACCESSDENIED` |
 
-The MinGW sanitizer attempts failed during compiler link checks because the runtimes are absent; no sanitizer result is claimed locally. The remote GitHub Actions matrix is required for sanitizer evidence.
+The package-install `find_package(Certivox)` consumer, `add_subdirectory` consumer, and direct-source C99 example were configured, built and executed successfully with GCC 16.1.0. The example links the documented Hamming(7,4) helper source dependency. Historical remote CI below was run against a pre-productization revision and does not validate the current namespaced source revision.
 
-## Remote GitHub Actions
+## Historical remote GitHub Actions
 
-Workflow [43016178113](https://github.com/Vanderhell/certivox/actions/runs/43016178113) on commit `48d7eeef414b7869358ffcf889949cd1e206106f` completed **8/8 PASS**: GCC Debug/Release, Clang Debug/Release, MSVC Debug/Release, GCC ASan and GCC UBSan. This run includes the differential suite and supplies sanitizer evidence unavailable from the local MinGW installation.
+Workflow [43016178113](https://github.com/Vanderhell/certivox/actions/runs/43016178113) on pre-productization commit `48d7eeef414b7869358ffcf889949cd1e206106f` completed 8/8 jobs. This is historical evidence only; it does not validate the present namespace/layout changes. Current-revision remote Actions have not run.
 
 ## Reproduce
 
@@ -57,13 +57,9 @@ ctest --test-dir build -C Release --output-on-failure
 
 ## ESP32-S3 status
 
-**Current hardware result: PASS, 14/14 APIs** on the user-authorized ESP32-S3 at COM37 (USB Serial/JTAG; MAC `3c:0f:02:d9:77:30`; ESP32-S3 revision 0.2). Validation firmware was built with ESP-IDF 5.5.1 and all 14 public APIs were called and checked against known answers, independent positional/parity references, and exhaustive Hamming/SECDED bit-error patterns for representative data. Serial output: `CERTIVOX_ALL14_PASS|passed=14/14|first_failed_api=0`.
+**Current product revision: HW NOT VERIFIED.** Historical validation reports recorded successful calls for all 14 pre-productization APIs on an ESP32-S3. Those runs predate the product namespace and file migration, and have not been repeated against this revision. The validation source is retained under `tests/hardware/esp32s3/`; no device was programmed as part of this audit pass.
 
-Only app0 (`0x10000..0x3FFFF`) was written. No bootloader, partition table, OTA metadata, NVS, app1, SPIFFS or coredump areas were written. Per the user's instruction, no backup was made; the prior app0 contents were overwritten and were not restored. COM19 and COM36 were not used. This is an explicit test deployment rather than a nondestructive inspection.
-
-The first firmware run failed the API 13 check because the temporary, independent SECDED parity oracle initialized overall parity from the data word and then counted each set data bit again. The oracle was corrected and the rebuilt firmware then passed all 14 checks. This was a test-harness defect; no production source was changed.
-
-Earlier records under `docs/hardware/` and the extracted sketch run remain historical evidence and are not used as this run's result. The current firmware compiled the production `src/*.c` files directly as C99. Host and hardware checks are independent evidence; hardware vectors are targeted and do not exhaust 32-bit data domains.
+The earlier firmware result included a corrected SECDED test-oracle defect; no production change was needed. Historical cycle and footprint values are identified separately in `docs/PERFORMANCE.md`. They are evidence for the earlier build configuration, not current-revision measurements.
 
 ## Known limits
 
@@ -71,5 +67,5 @@ Earlier records under `docs/hardware/` and the extracted sketch run remain histo
 - The maximum CRC-combine suffix length has an independent fixed reference vector; no 4 GiB payload was materialized.
 - Ordinary Hamming(7,4) can miscorrect multi-bit errors. Extended Hamming and SECDED guarantees cover only one- and two-bit error patterns respectively.
 - CRC and ECC here are not cryptographic authentication or tamper protection.
-- The hardware run uses representative vectors; it does not exhaust every CRC input or the complete SECDED data domain.
+- Historical hardware vectors are representative; they do not exhaust every CRC input or the complete SECDED data domain.
 - Hardware performance and footprint measurement method and limitations are recorded in `docs/PERFORMANCE.md`.

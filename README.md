@@ -1,4 +1,4 @@
-# Certivox
+﻿# Certivox
 ![CI](https://github.com/Vanderhell/certivox/actions/workflows/ci.yml/badge.svg) ![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg) ![Language](https://img.shields.io/badge/language-C99-informational.svg)
 
 ![Certivox banner](docs/banner.svg)
@@ -24,7 +24,7 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-For a minimal integration, include only the required public header and compile the matching source unit.
+For package integration, link `Certivox::Certivox` from `find_package(Certivox CONFIG REQUIRED)`. For a minimal integration, include only the required public header and compile its matching `src/certivox_*.c` source unit and any dependency listed in the API reference. Tests, examples and benchmarks are opt-in and off by default.
 
 ## Documentation
 
@@ -40,16 +40,16 @@ For a minimal integration, include only the required public header and compile t
 
 The public surface consists of 14 headers and 14 callable API entries under include/. Implementations are in src/ and tests are in tests/. State, buffers and output ownership are explicit in each header contract.
 
-The CMake test option is CERTIVOX_BUILD_TESTS. The library has no mandatory third-party dependency. Platform-specific link requirements are documented in CMake and the affected API header.
+The CMake test option is CERTIVOX_BUILD_TESTS (off by default for dependency consumers). The namespaced target is Certivox::Certivox; install exports a find_package(Certivox) package. The library has no mandatory third-party dependency. Platform-specific link requirements are documented in CMake and the affected API header.
 
 ## Validation status
 
 All 14 public APIs have direct enabled tests. The audit differential suite adds 100,000 deterministic reference comparisons per applicable CRC operation and 100,000 full-width SECDED inputs. GCC, ClangCL and MSVC Debug/Release results and sanitizer status are recorded in [docs/TESTING.md](docs/TESTING.md).
 
-The current ESP32-S3 validation on the designated test board passed all 14 API checks. Compiler settings, measured cycles, library-only footprint, and the stack watermark's limits are recorded in [docs/PERFORMANCE.md](docs/PERFORMANCE.md). No CRC or ECC operation is a substitute for authenticated integrity protection.
+Historical ESP32-S3 evidence covers all 14 pre-productization APIs. The current namespace/layout revision is **HW NOT VERIFIED**. Earlier cycle and footprint records are labeled historical in [docs/PERFORMANCE.md](docs/PERFORMANCE.md). No CRC or ECC operation is a substitute for authenticated integrity protection.
 
 Detailed overflow, rounding, invalid-input, memory-ownership and state rules are defined by the public headers and API reference. Do not infer them from the product name alone.
 
 ## License
 
-Apache License 2.0, copyright Vanderhell. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Apache License 2.0, copyright Vanderhell. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Contribution guidance: [CONTRIBUTING.md](CONTRIBUTING.md). Security reporting: [SECURITY.md](SECURITY.md).
